@@ -1,6 +1,14 @@
 import urllib.request
 from bs4 import BeautifulSoup
 
+class Title:
+	def __init__(self, series_name, season, episode, quality, link):
+		self.name = series_name
+		self.season = season
+		self.episode = quality
+		self.quality = link
+
+
 
 def parse_season_n_episode(word):
 	if len(word) == 6 and word[1].isdigit():
@@ -21,7 +29,6 @@ def parse_name(name,num_of_words):
 	under = name.find('_')
 	dot = name.find('.')
 	space = name.find(' ')
-	print(name)
 
 	if (under > 0) and ((dot == -1) or (under <= dot)) and ((space == -1) or(under <= space)):
 		sep = '_'
@@ -39,16 +46,35 @@ def parse_name(name,num_of_words):
 		series_name = series_name + ' ' + info_list[i]
 	
 	series_name = series_name.strip()
+
 	season = -1
 	episode = -1
 	quality = -1
+
 	if len(info_list[num_of_words]) % 3 == 0:
 		season, episode = parse_season_n_episode(info_list[num_of_words])
 
-	#if info_list[]
-	print(series_name)
-	print(season)
-	print(episode)
+	return series_name, season, episode, quality
+
+def create_title_list(htmltext):
+	soup = BeautifulSoup(htmltext, 'html.parser')
+
+	titles_list = []
+
+	for row in soup.find_all('tr'):
+		name = row.find('a', class_='detLink')
+		magnet = row.find('a', title = "Download this torrent using magnet")
+	
+		if name == None or magnet == None:
+			continue
+
+		name = name.text
+		magnet = magnet.get('href')
+	
+		series_name, season, episode, quality = parse_name(name, num_of_words)
+		titles_list.append(Title(series_name, season, episode, quality, magnet))
+
+	return titles_list
 
 headers = {}
 headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
@@ -70,25 +96,8 @@ request = urllib.request.Request(full_url, headers= headers)
 htmlfile = urllib.request.urlopen(request)
 htmltext = htmlfile.read()
 
-soup = BeautifulSoup(htmltext, 'html.parser')
 
-i = 0
-for row in soup.find_all('tr'):
-	name = row.find('a', class_='detLink')
-	magnet = row.find('a', title = "Download this torrent using magnet")
-	
-	if name == None or magnet == None:
-		continue
+titles_list = create_title_list(htmltext)
 
-	name = name.text
-	magnet = magnet.get('href')
-	title_info = parse_name(name, num_of_words)
-
-	#print(i)	
-	#print(name.text)
-	#print(magnet.get('href'))
-
-	i += 1
-	
-	print("\n\n\n")
-#print (soup.prettify())
+for title in titles_list:
+	print(vars(title))
