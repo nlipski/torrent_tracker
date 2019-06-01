@@ -1,6 +1,30 @@
+import csv
 import urllib.request
 from bs4 import BeautifulSoup
-from qbittorrent import Client
+from itertools import groupby
+#from qbittorrent import Client
+
+class Title:
+
+	def __init__(self, series_name, season, episode, quality, link):
+		
+		self.name = series_name
+		self.season = season
+		self.episode = episode
+		self.quality = quality
+		self.link = link
+
+	def __eq__(self, other):
+
+		return self.name == other.name \
+				and self.season == other.season \
+				and self.episode == other.episode 
+
+	def __hash__(self):
+
+		return hash(('name',self.name,
+					'season', self.season,
+					'episode', self.episode))
 
 def init_header():
 
@@ -12,16 +36,6 @@ def init_header():
 	headers['Accept-Language'] = "en-US,en;q=0.8"
 	headers['Connection'] = "keep-alive"
 	return headers
-
-class Title:
-	def __init__(self, series_name, season, episode, quality, link):
-		self.name = series_name
-		self.season = season
-		self.episode = episode
-		self.quality = quality
-		self.link = link
-
-
 
 def parse_season_n_episode(word):
 	if len(word) == 6 and word[1].isdigit():
@@ -110,13 +124,29 @@ def create_search_link(series_name, headers, pagenum):
 
 def remove_unclassified(titles_list):
 
-	return list(filter(lambda title: title.season != -1 or title.episode != -1 , titles_list))
+	return list(filter(lambda title: title.season != -1 and title.episode != -1 , titles_list))
 
 # NEED TO DEAL WITH INCONSISTENCY WITH NAMES
 
-def sort_by_season_episode(titles_list):
+def sort_by_season(titles_list):
 
 	return sorted(titles_list, key=lambda title: title.season, reverse = True)
+
+def sort_by_episode(titles_list):
+	new_list = []
+	for key, group in groupby(titles_list, lambda title: title.season):
+		sublist = sorted(group, key=lambda title: title.episode, reverse = True)
+		new_list.extend(sublist)
+
+	return new_list
+
+def parse_titles_list(titles_list):
+	
+	titles_list = remove_unclassified(titles_list)
+	titles_list = set(titles_list)
+	titles_list = sort_by_season(titles_list)
+	return sort_by_episode(titles_list)
+
 
 
 headers = init_header()
@@ -124,7 +154,10 @@ series_name = "family guy   "
 series_name, num_of_words = prepare_name(series_name)
 htmltext = create_search_link(series_name, headers, 0)
 titles_list = create_title_list(htmltext, num_of_words)
-titles_list = remove_unclassified(titles_list)
-titles_list = sort_by_season_episode(titles_list)
-for title in titles_list:
-	print(title.season)
+newlist = parse_titles_list(titles_list)
+
+
+print("titles_list length = "+str(len(titles_list)))
+print("newlist length = "+str(len(newlist)))
+for title in newlist:
+	print("S"+str(title.season)+ "E"+str(title.episode)+"   link: "+ str(title.link))
