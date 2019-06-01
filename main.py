@@ -1,12 +1,25 @@
 import urllib.request
 from bs4 import BeautifulSoup
+from qbittorrent import Client
+
+def init_header():
+
+	headers = {}
+	headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
+	headers['Accept'] = "text/html"
+	headers['Accept-Charset'] = "ISO-8859-1,utf-8;q=0.7,*;q=0.3"
+	headers['Accept-Encoding'] = "none"
+	headers['Accept-Language'] = "en-US,en;q=0.8"
+	headers['Connection'] = "keep-alive"
+	return headers
 
 class Title:
 	def __init__(self, series_name, season, episode, quality, link):
 		self.name = series_name
 		self.season = season
-		self.episode = quality
-		self.quality = link
+		self.episode = episode
+		self.quality = quality
+		self.link = link
 
 
 
@@ -56,7 +69,7 @@ def parse_name(name,num_of_words):
 
 	return series_name, season, episode, quality
 
-def create_title_list(htmltext):
+def create_title_list(htmltext, num_of_words):
 	soup = BeautifulSoup(htmltext, 'html.parser')
 
 	titles_list = []
@@ -76,28 +89,42 @@ def create_title_list(htmltext):
 
 	return titles_list
 
-headers = {}
-headers['User-Agent'] = "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17"
-headers['Accept'] = "text/html"
-headers['Accept-Charset'] = "ISO-8859-1,utf-8;q=0.7,*;q=0.3"
-headers['Accept-Encoding'] = "none"
-headers['Accept-Language'] = "en-US,en;q=0.8"
-headers['Connection'] = "keep-alive"
+def prepare_name(series_name):
+	space = '%20'
+	series_name = (series_name.strip()).replace(' ', space)
+	num_of_words = series_name.count(space) + 1
+	
+	return series_name, num_of_words
 
-space = '%20'
-series_name = " family guy  "
-series_name = (series_name.strip()).replace(' ', space)
-num_of_words = series_name.count(space) + 1
-print(num_of_words)
-full_url = "https://thepiratebay.org/s/?q="+series_name+"&video=on&category=0&page=0&orderby=99"
+def create_search_link(series_name, headers, pagenum):
+	
 
-request = urllib.request.Request(full_url, headers= headers)
+	full_url = "https://thepiratebay.org/s/?q="+series_name+"&video=on&category=0&page="+str(pagenum)+"&orderby=99"
 
-htmlfile = urllib.request.urlopen(request)
-htmltext = htmlfile.read()
+	request = urllib.request.Request(full_url, headers= headers)
+
+	htmlfile = urllib.request.urlopen(request)
+	htmltext = htmlfile.read()
+
+	return htmltext
+
+def remove_unclassified(titles_list):
+
+	return list(filter(lambda title: title.season != -1 or title.episode != -1 , titles_list))
+
+# NEED TO DEAL WITH INCONSISTENCY WITH NAMES
+
+def sort_by_season_episode(titles_list):
+
+	return sorted(titles_list, key=lambda title: title.season, reverse = True)
 
 
-titles_list = create_title_list(htmltext)
-
+headers = init_header()
+series_name = "family guy   "
+series_name, num_of_words = prepare_name(series_name)
+htmltext = create_search_link(series_name, headers, 0)
+titles_list = create_title_list(htmltext, num_of_words)
+titles_list = remove_unclassified(titles_list)
+titles_list = sort_by_season_episode(titles_list)
 for title in titles_list:
-	print(vars(title))
+	print(title.season)
