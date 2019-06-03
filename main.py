@@ -1,3 +1,5 @@
+import contextlib
+import time
 import csv
 import urllib.request
 from bs4 import BeautifulSoup
@@ -26,6 +28,12 @@ class Title:
 					'season', self.season,
 					'episode', self.episode))
 
+	def __iter__(self):
+
+		return iter([str(self.__hash__()),self.name,\
+							self.season, self.episode,\
+							 self.quality, self.link])
+
 def init_header():
 
 	headers = {}
@@ -38,6 +46,7 @@ def init_header():
 	return headers
 
 def parse_season_n_episode(word):
+	
 	if len(word) == 6 and word[1].isdigit():
 
 		season = int (word[1] + word[2])
@@ -84,6 +93,7 @@ def parse_name(name,num_of_words):
 	return series_name, season, episode, quality
 
 def create_title_list(htmltext, num_of_words):
+	
 	soup = BeautifulSoup(htmltext, 'html.parser')
 
 	titles_list = []
@@ -104,6 +114,7 @@ def create_title_list(htmltext, num_of_words):
 	return titles_list
 
 def prepare_name(series_name):
+	
 	space = '%20'
 	series_name = (series_name.strip()).replace(' ', space)
 	num_of_words = series_name.count(space) + 1
@@ -112,13 +123,20 @@ def prepare_name(series_name):
 
 def create_search_link(series_name, headers, pagenum):
 	
-
 	full_url = "https://thepiratebay.org/s/?q="+series_name+"&video=on&category=0&page="+str(pagenum)+"&orderby=99"
+	htmltext = ""
+	try:
+		request = urllib.request.Request(full_url, headers= headers)
+		htmlfile = urllib.request.urlopen(request)
+		htmltext = htmlfile.read()
+	except err:
+		print (err.reason)
 
-	request = urllib.request.Request(full_url, headers= headers)
-
-	htmlfile = urllib.request.urlopen(request)
-	htmltext = htmlfile.read()
+	finally:
+		try:
+			htmlfile.close()
+		except NameError:
+			pass
 
 	return htmltext
 
@@ -147,17 +165,28 @@ def parse_titles_list(titles_list):
 	titles_list = sort_by_season(titles_list)
 	return sort_by_episode(titles_list)
 
+def create_csv(titles_list, csv_name):
+	with open(str(csv_name +'.csv'), mode='w') as csv_file:
+		writer = csv.writer(csv_file, delimiter=',')
+		for title in titles_list:
+			writer.writerow(list(title))
+	csv_file.close()
+
+
 
 
 headers = init_header()
-series_name = "family guy   "
+series_name = "family guy"
+titles_list = []
 series_name, num_of_words = prepare_name(series_name)
-htmltext = create_search_link(series_name, headers, 0)
-titles_list = create_title_list(htmltext, num_of_words)
-newlist = parse_titles_list(titles_list)
 
+for page_num in range(5):
+	htmltext = create_search_link(series_name, headers, page_num)
+	titles_list.extend(create_title_list(htmltext, num_of_words))
+	time.sleep(5)
+	print("Parsing page number: "+ str(page_num))
 
-print("titles_list length = "+str(len(titles_list)))
-print("newlist length = "+str(len(newlist)))
-for title in newlist:
-	print("S"+str(title.season)+ "E"+str(title.episode)+"   link: "+ str(title.link))
+titles_list = parse_titles_list(titles_list)
+print("length: "+ str(len(titles_list)))
+create_csv(titles_list, series_name)
+
