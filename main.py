@@ -8,6 +8,7 @@ from itertools import groupby
 #from qbittorrent import Client
 
 CSV_FOLDER = "shows_lists/"
+NUM_PAGES = 4
 class Title:
 
 	def __init__(self, series_name, season, episode, quality, link):
@@ -141,6 +142,18 @@ def create_search_link(series_name, headers, pagenum):
 
 	return htmltext
 
+def compose_full_list(num_pages, series_name):
+	titles_list = []
+	headers = init_header()
+	series_name, num_of_words = prepare_name(series_name)
+	for page_num in range(num_pages):
+		htmltext = create_search_link(series_name, headers, page_num)
+		titles_list.extend(create_title_list(htmltext, num_of_words))
+		time.sleep(1)
+		print("Parsing page number: "+ str(page_num))
+
+	return parse_titles_list(titles_list)
+
 def remove_unclassified(titles_list):
 
 	return list(filter(lambda title: title.season != -1 and title.episode != -1 , titles_list))
@@ -149,13 +162,13 @@ def remove_unclassified(titles_list):
 
 def sort_by_season(titles_list):
 
-	return sorted(titles_list, key=lambda title: title.season, reverse = True)
+	return sorted(titles_list, key=lambda title: title.season)
 
 def sort_by_episode(titles_list):
 
 	new_list = []
 	for key, group in groupby(titles_list, lambda title: title.season):
-		sublist = sorted(group, key=lambda title: title.episode, reverse = True)
+		sublist = sorted(group, key=lambda title: title.episode)
 		new_list.extend(sublist)
 
 	return new_list
@@ -185,29 +198,48 @@ def read_csv(csv_name):
 	with open(file_path, mode='r', newline='') as csv_file:
 		reader = csv.reader(csv_file, delimiter=",")
 		for row in reader:
-			titles_list.append(Title(row[1], row[2], row[3], row[4], row[5]))
-	
+			titles_list.append(Title(row))
+	csv_file.close()
+
 	return titles_list
 
+def append_to_csv(csv_name, titles_list):
 
-def init_list_for_show(series_name):
+	file_path = os.path.join(CSV_FOLDER , str(csv_name+'.csv'))
+	if os.path.isfile(file_path) != True:
+		return None
+	with open(file_path, mode='a', newline='') as csv_file:
+		writer = csv.writer(csv_file, delimiter=',')
+		for title in titles_list:
+			writer.writerow(list(title))
+	csv_file.close()
+
+def update_shows_list(series_name):
+
+	titles_list = read_csv(series_name)
+
+	if titles_list is  None:
+		return 0
+
+	new_list = compose_full_list(NUM_PAGES, series_name)
+
+	if new_list[len(new_list) - 1].__hash__() == titles_list[len(titles_list) - 1].__hash__():
+		return 0
+
+	diff_list = new_list - titles_list
+
+	append_to_csv(series_name, diff_list)
+
+	return len(diff_list)
+
+
+
+def init_shows_list(series_name):
 	
-	headers = init_header()
-	titles_list = []
-	series_name, num_of_words = prepare_name(series_name)
-
-	for page_num in range(4):
-		htmltext = create_search_link(series_name, headers, page_num)
-		titles_list.extend(create_title_list(htmltext, num_of_words))
-		time.sleep(2)
-		print("Parsing page number: "+ str(page_num))
-
-	titles_list = parse_titles_list(titles_list)
+	titles_list = compose_full_list(NUM_PAGES, series_name)
 	print("length: "+ str(len(titles_list)))
 	create_csv(titles_list, series_name)
 
 
 
-init_list_for_show("chernobyl")
-
-titles_list = read_csv(series_name)
+init_shows_list("chernobyl")
