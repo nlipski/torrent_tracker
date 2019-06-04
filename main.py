@@ -1,4 +1,5 @@
 import contextlib
+import os.path
 import time
 import csv
 import urllib.request
@@ -172,21 +173,23 @@ def create_csv(titles_list, csv_name):
 			writer.writerow(list(title))
 	csv_file.close()
 
+def init_list_for_show(series_name):
+	
+	headers = init_header()
+	titles_list = []
+	series_name, num_of_words = prepare_name(series_name)
+
+	for page_num in range(4):
+		htmltext = create_search_link(series_name, headers, page_num)
+		titles_list.extend(create_title_list(htmltext, num_of_words))
+		time.sleep(5)
+		print("Parsing page number: "+ str(page_num))
+
+	titles_list = parse_titles_list(titles_list)
+	print("length: "+ str(len(titles_list)))
+	create_csv(titles_list, series_name)
 
 
 
-headers = init_header()
-series_name = "family guy"
-titles_list = []
-series_name, num_of_words = prepare_name(series_name)
-
-for page_num in range(5):
-	htmltext = create_search_link(series_name, headers, page_num)
-	titles_list.extend(create_title_list(htmltext, num_of_words))
-	time.sleep(5)
-	print("Parsing page number: "+ str(page_num))
-
-titles_list = parse_titles_list(titles_list)
-print("length: "+ str(len(titles_list)))
-create_csv(titles_list, series_name)
+init_list_for_show("chernobyl")
 
