@@ -7,10 +7,10 @@ from bs4 import BeautifulSoup
 from itertools import groupby
 #from qbittorrent import Client
 
+CSV_FOLDER = "shows_lists/"
 class Title:
 
 	def __init__(self, series_name, season, episode, quality, link):
-		
 		self.name = series_name
 		self.season = season
 		self.episode = episode
@@ -152,6 +152,7 @@ def sort_by_season(titles_list):
 	return sorted(titles_list, key=lambda title: title.season, reverse = True)
 
 def sort_by_episode(titles_list):
+
 	new_list = []
 	for key, group in groupby(titles_list, lambda title: title.season):
 		sublist = sorted(group, key=lambda title: title.episode, reverse = True)
@@ -167,11 +168,27 @@ def parse_titles_list(titles_list):
 	return sort_by_episode(titles_list)
 
 def create_csv(titles_list, csv_name):
-	with open(str(csv_name +'.csv'), mode='w') as csv_file:
+
+	file_path = os.path.join(CSV_FOLDER , str(csv_name+'.csv'))
+	with open(file_path, mode='w', newline='') as csv_file:
 		writer = csv.writer(csv_file, delimiter=',')
 		for title in titles_list:
 			writer.writerow(list(title))
 	csv_file.close()
+
+def read_csv(csv_name):
+
+	titles_list = []
+	file_path = os.path.join(CSV_FOLDER , str(csv_name+'.csv'))
+	if os.path.isfile(file_path) != True:
+		return titles_list
+	with open(file_path, mode='r', newline='') as csv_file:
+		reader = csv.reader(csv_file, delimiter=",")
+		for row in reader:
+			titles_list.append(Title(row[1], row[2], row[3], row[4], row[5]))
+	
+	return titles_list
+
 
 def init_list_for_show(series_name):
 	
@@ -182,7 +199,7 @@ def init_list_for_show(series_name):
 	for page_num in range(4):
 		htmltext = create_search_link(series_name, headers, page_num)
 		titles_list.extend(create_title_list(htmltext, num_of_words))
-		time.sleep(5)
+		time.sleep(2)
 		print("Parsing page number: "+ str(page_num))
 
 	titles_list = parse_titles_list(titles_list)
@@ -193,3 +210,4 @@ def init_list_for_show(series_name):
 
 init_list_for_show("chernobyl")
 
+titles_list = read_csv(series_name)
