@@ -1,6 +1,8 @@
 import contextlib
 import os.path
+import sys
 import time
+import datetime
 import csv
 import urllib.request
 from bs4 import BeautifulSoup
@@ -8,7 +10,7 @@ from itertools import groupby
 #from qbittorrent import Client
 
 CSV_FOLDER = "shows_lists/"
-NUM_PAGES = 4
+NUM_PAGES = 3
 class Title:
 
 	def __init__(self, series_name, season, episode, quality, link):
@@ -59,6 +61,10 @@ def parse_season_n_episode(word):
 		return season, -1
 	else:
 		return -1, -1
+
+def diff(first, second):
+        second = set(second)
+        return [item for item in first if item not in second]
 
 def parse_name(name,num_of_words):
 
@@ -198,7 +204,7 @@ def read_csv(csv_name):
 	with open(file_path, mode='r', newline='') as csv_file:
 		reader = csv.reader(csv_file, delimiter=",")
 		for row in reader:
-			titles_list.append(Title(row))
+			titles_list.append(Title(row[0], row[1], row[2], row[3], row[4]))
 	csv_file.close()
 
 	return titles_list
@@ -217,16 +223,16 @@ def append_to_csv(csv_name, titles_list):
 def update_shows_list(series_name):
 
 	titles_list = read_csv(series_name)
-
-	if titles_list is  None:
+	if  titles_list is  None:
 		return 0
 
 	new_list = compose_full_list(NUM_PAGES, series_name)
 
-	if new_list[len(new_list) - 1].__hash__() == titles_list[len(titles_list) - 1].__hash__():
-		return 0
+	last_object_csv = titles_list[len(titles_list) - 1]
 
-	diff_list = new_list - titles_list
+	if new_list[len(new_list) - 1].__hash__() == last_object_csv.__hash__():
+		return 0
+	diff_list = diff(new_list, titles_list)
 
 	append_to_csv(series_name, diff_list)
 
@@ -236,10 +242,38 @@ def update_shows_list(series_name):
 
 def init_shows_list(series_name):
 	
+	print("Starting to load links for: "+ str(series_name))
 	titles_list = compose_full_list(NUM_PAGES, series_name)
-	print("length: "+ str(len(titles_list)))
+	print("Created a list with length: "+ str(len(titles_list)))
 	create_csv(titles_list, series_name)
+	print("Stored the list in: "+ str(series_name))
 
 
 
-init_shows_list("chernobyl")
+
+if len(sys.argv) < 2:
+	print ("Error: no show arguments were entered")
+	print ("Try again")
+
+shows_list = sys.argv
+shows_list.pop(0)
+
+for title in shows_list:
+	if os.path.exists( CSV_FOLDER + title + '.csv') == True:
+		continue
+
+	init_shows_list(title)
+
+while True:
+	for title in shows_list:
+		updated = update_shows_list(title)
+		if updated > 0:
+			now = datetime.datetime.now()
+			print("Added "+str(updated)+ " episodes to "+ title+ " at "+ str(now.strftime("%Y-%m-%d %H:%M")))
+
+	print("Update completed.")
+	print("Going into hybernation for 10 Min")
+	time.sleep(600)	
+
+
+
