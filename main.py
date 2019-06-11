@@ -67,14 +67,10 @@ def parse_season_n_episode(word):
 def diff(first, second):
 		
 		new_list = []
-		
+		index = len(first) - 1
 		for new_title in second:
-			title_spot = find( lambda title: title.name == new_title.name and title.season == new_title.season and title.episode == new_title.episode, first)
-			
-		if title_spot > -1:
-			return new_list
-
-		new_list.append(new_title)
+			while int(first[index].season) <= int(new_title.season) and int(first[index].episode) < int(new_title.episode):
+				new_list.append(new_title)
 
 		return new_list
 
