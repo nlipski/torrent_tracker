@@ -7,9 +7,10 @@ import csv
 import urllib.request
 from bs4 import BeautifulSoup
 from itertools import groupby
-#from qbittorrent import Client
+from qbittorrent import Client
 
 CSV_FOLDER = "shows_lists/"
+DOWNLOADS_FOLDER = "downloaded_shows/"
 NUM_PAGES = 3
 
 class Title:
@@ -246,7 +247,6 @@ def update_shows_list(series_name):
 	return len(diff_list)
 
 
-
 def init_shows_list(series_name):
 	
 	print("Starting to load links for: "+ str(series_name))
@@ -256,6 +256,28 @@ def init_shows_list(series_name):
 	print("Stored the list in: "+ str(series_name))
 
 
+def download_series(qb, shows_list):
+
+	num_of_titles = 3
+	
+	if len(shows_list) < 3:
+		num_of_titles = len(shows_list)
+
+	for show in shows_list[-num_of_titles:]:
+		qb.download_from_link(show.link, savepath=DOWNLOADS_FOLDER)
+
+def set_torrent_client():
+	
+	qb = Client('http://127.0.0.1:8080/')
+	qb.login()
+
+	return qb
+
+def show_all_active_torrents(qb):
+
+	torrents =  qb.torrents(filter='downloading')
+	for torrent in torrents:
+		print (torrent['name'])
 
 
 
@@ -266,11 +288,14 @@ if len(sys.argv) < 2:
 shows_list = sys.argv
 shows_list.pop(0)
 
+qb = set_torrent_client()
+
 for title in shows_list:
 	if os.path.exists( CSV_FOLDER + title + '.csv') == True:
 		continue
 
 	init_shows_list(title)
+	download_series(qb, shows_list)
 
 while True:
 	for title in shows_list:
@@ -279,6 +304,7 @@ while True:
 			now = datetime.datetime.now()
 			print("Added "+str(updated)+ " episodes to "+ title+ " at "+ str(now.strftime("%Y-%m-%d %H:%M")))
 
+	show_all_active_torrents(qb)
 	print("Update completed.")
 	print("Going into hybernation for 10 Min")
 	time.sleep(600)	
