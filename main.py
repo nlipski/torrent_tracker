@@ -11,6 +11,7 @@ from itertools import groupby
 
 CSV_FOLDER = "shows_lists/"
 NUM_PAGES = 3
+
 class Title:
 
 	def __init__(self, series_name, season, episode, quality, link):
@@ -22,21 +23,21 @@ class Title:
 
 	def __eq__(self, other):
 
-		return self.name == other.name \
-				and self.season == other.season \
-				and self.episode == other.episode 
+		return (self.name == other.name and\
+				self.season == other.season and\
+				self.episode == other.episode)
 
 	def __hash__(self):
 
-		return hash(('name',self.name,
-					'season', self.season,
+		return hash(('name',self.name,\
+					'season', self.season,\
 					'episode', self.episode))
 
 	def __iter__(self):
 
-		return iter([str(self.__hash__()),self.name,\
-							self.season, self.episode,\
-							 self.quality, self.link])
+		return iter([self.name,\
+					 self.season, self.episode,\
+					 self.quality, self.link])
 
 def init_header():
 
@@ -47,6 +48,7 @@ def init_header():
 	headers['Accept-Encoding'] = "none"
 	headers['Accept-Language'] = "en-US,en;q=0.8"
 	headers['Connection'] = "keep-alive"
+
 	return headers
 
 def parse_season_n_episode(word):
@@ -63,8 +65,18 @@ def parse_season_n_episode(word):
 		return -1, -1
 
 def diff(first, second):
-        second = set(second)
-        return [item for item in first if item not in second]
+		
+		new_list = []
+		
+		for new_title in second:
+			title_spot = find( lambda title: title.name == new_title.name and title.season == new_title.season and title.episode == new_title.episode, first)
+			
+		if title_spot > -1:
+			return new_list
+
+		new_list.append(new_title)
+
+		return new_list
 
 def parse_name(name,num_of_words):
 
@@ -193,7 +205,7 @@ def create_csv(titles_list, csv_name):
 		writer = csv.writer(csv_file, delimiter=',')
 		for title in titles_list:
 			writer.writerow(list(title))
-	csv_file.close()
+		csv_file.close()
 
 def read_csv(csv_name):
 
@@ -205,7 +217,7 @@ def read_csv(csv_name):
 		reader = csv.reader(csv_file, delimiter=",")
 		for row in reader:
 			titles_list.append(Title(row[0], row[1], row[2], row[3], row[4]))
-	csv_file.close()
+		csv_file.close()
 
 	return titles_list
 
@@ -218,22 +230,21 @@ def append_to_csv(csv_name, titles_list):
 		writer = csv.writer(csv_file, delimiter=',')
 		for title in titles_list:
 			writer.writerow(list(title))
-	csv_file.close()
+		csv_file.close()
 
 def update_shows_list(series_name):
 
 	titles_list = read_csv(series_name)
-	if  titles_list is  None:
+	if  titles_list is None or len(titles_list) == 0:
 		return 0
 
 	new_list = compose_full_list(NUM_PAGES, series_name)
 
-	last_object_csv = titles_list[len(titles_list) - 1]
-
-	if new_list[len(new_list) - 1].__hash__() == last_object_csv.__hash__():
+	if new_list[-1].__eq__(titles_list[-1]):
 		return 0
-	diff_list = diff(new_list, titles_list)
 
+
+	diff_list = diff(new_list, titles_list) 
 	append_to_csv(series_name, diff_list)
 
 	return len(diff_list)
@@ -247,6 +258,7 @@ def init_shows_list(series_name):
 	print("Created a list with length: "+ str(len(titles_list)))
 	create_csv(titles_list, series_name)
 	print("Stored the list in: "+ str(series_name))
+
 
 
 
