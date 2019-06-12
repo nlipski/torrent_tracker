@@ -4,6 +4,7 @@ import sys
 import time
 import datetime
 import csv
+import socket
 import urllib.request
 from bs4 import BeautifulSoup
 from itertools import groupby
@@ -268,7 +269,9 @@ def download_series(qb, shows_list):
 
 def set_torrent_client():
 	
-	qb = Client('http://127.0.0.1:8080/')
+
+	ip = socket.gethostbyname(socket.gethostname())
+	qb = Client('http://'+ip+':8080/')
 	qb.login()
 
 	return qb
